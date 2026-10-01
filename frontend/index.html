@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f5f9ff">
+    <title>Monitor Energi Kost</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style.css?v=6">
+</head>
+<body>
+    <main class="page-shell">
+        <header class="page-header">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M13.2 2.8 5.9 13h5.2l-.4 8.2L18.1 11h-5.2l.3-8.2Z" fill="currentColor"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="eyebrow">SMART ENERGY DASHBOARD</p>
+                    <h1>Monitor energi</h1>
+                    <p class="page-description">Semua penggunaan listrik kamar, dalam satu pandangan.</p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="connection-status is-waiting" id="sensor-status" role="status">
+                    <span class="connection-dot" aria-hidden="true"></span>
+                    <span id="sensor-status-label">Menunggu sensor</span>
+                </div>
+                <div class="tariff-control">
+                    <div class="tariff-info">
+                        <span class="tariff-label">Tarif saat ini</span>
+                        <span class="tariff-value">Rp <span id="display-tarif">...</span><span class="tariff-unit"> / kWh</span></span>
+                    </div>
+                    <button class="button button-secondary" type="button" onclick="ubahTarif()">Atur tarif</button>
+                </div>
+                <button class="button button-admin" id="admin-access" type="button">Akses admin</button>
+            </div>
+        </header>
+
+        <section class="summary-grid" aria-label="Ringkasan pemakaian">
+            <article class="summary-card">
+                <div class="summary-icon power-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M13.2 2.8 5.9 13h5.2l-.4 8.2L18.1 11h-5.2l.3-8.2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="summary-label">Total daya terukur</p>
+                    <p class="summary-value"><span id="sum-watt">0</span><span class="summary-unit"> W</span></p>
+                </div>
+            </article>
+            <article class="summary-card">
+                <div class="summary-icon energy-icon" aria-hidden="true">kWh</div>
+                <div>
+                    <p class="summary-label">Total konsumsi</p>
+                    <p class="summary-value"><span id="sum-kwh">0</span><span class="summary-unit"> kWh</span></p>
+                </div>
+            </article>
+            <article class="summary-card">
+                <div class="summary-icon cost-icon" aria-hidden="true">Rp</div>
+                <div>
+                    <p class="summary-label">Estimasi total tagihan</p>
+                    <p class="summary-value"><span class="summary-unit">Rp </span><span id="sum-biaya">0</span></p>
+                </div>
+            </article>
+        </section>
+
+        <section class="rooms-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Daftar kamar</h2>
+                    <p>Pemakaian dan biaya listrik, diperbarui dari pembacaan sensor.</p>
+                </div>
+            </div>
+            <div class="rooms-grid" id="container-kamar">
+                <p class="loading-message">Memuat data kamar...</p>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal-backdrop" id="tenant-modal" hidden>
+        <section class="tenant-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-modal-title">
+            <button class="modal-close" id="tenant-cancel-icon" type="button" aria-label="Tutup">×</button>
+            <p class="eyebrow">PENGATURAN KAMAR</p>
+            <h2 id="tenant-modal-title">Ganti nama penghuni</h2>
+            <p class="modal-description" id="tenant-room-label">Kamar 01</p>
+            <form id="tenant-form">
+                <label class="field-label" for="tenant-name">Nama penghuni</label>
+                <input class="text-input" id="tenant-name" name="penghuni" type="text" maxlength="80" autocomplete="name" required>
+                <p class="form-error" id="tenant-error" role="alert" hidden></p>
+                <div class="modal-actions">
+                    <button class="button button-quiet" id="tenant-cancel" type="button">Batal</button>
+                    <button class="button button-secondary" id="tenant-save" type="submit">Simpan nama</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="admin-modal" hidden>
+        <section class="tenant-modal" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
+            <button class="modal-close" id="admin-cancel-icon" type="button" aria-label="Tutup">×</button>
+            <p class="eyebrow">AKSES TERBATAS</p>
+            <h2 id="admin-modal-title">Buka akses admin</h2>
+            <p class="modal-description">Masukkan kunci admin dari pengaturan backend untuk mengubah nama penghuni atau tarif.</p>
+            <form id="admin-form">
+                <label class="field-label" for="admin-key">Kunci admin</label>
+                <input class="text-input" id="admin-key" type="password" autocomplete="current-password" required>
+                <p class="form-error" id="admin-error" role="alert" hidden></p>
+                <div class="modal-actions">
+                    <button class="button button-quiet" id="admin-cancel" type="button">Batal</button>
+                    <button class="button button-secondary" type="submit">Buka akses</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="tariff-modal" hidden>
+        <section class="tenant-modal" role="dialog" aria-modal="true" aria-labelledby="tariff-modal-title">
+            <button class="modal-close" id="tariff-cancel-icon" type="button" aria-label="Tutup">×</button>
+            <p class="eyebrow">PENGATURAN BIAYA</p>
+            <h2 id="tariff-modal-title">Atur tarif listrik</h2>
+            <p class="modal-description">Tarif baru digunakan untuk menghitung estimasi tagihan berikutnya.</p>
+            <form id="tariff-form">
+                <label class="field-label" for="tariff-input">Tarif per kWh (Rp)</label>
+                <input class="text-input" id="tariff-input" type="number" min="0.01" step="0.01" required>
+                <p class="form-error" id="tariff-error" role="alert" hidden></p>
+                <div class="modal-actions">
+                    <button class="button button-quiet" id="tariff-cancel" type="button">Batal</button>
+                    <button class="button button-secondary" id="tariff-save" type="submit">Simpan tarif</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <script src="/assets/config.js?v=6"></script>
+    <script src="/assets/script.js?v=6"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+[build]
+  command = "node scripts/generate-netlify-config.js"
+  publish = "frontend"
+
+[build.environment]
+  NODE_VERSION = "20"
