@@ -22,8 +22,9 @@
    - `SENSOR_API_KEY` = kunci acak yang kuat untuk ESP32.
    - `ADMIN_API_KEY` = kunci acak yang berbeda untuk akses admin.
 5. Jangan isi `DATABASE_URL` dengan alamat file SQLite. Vercel menjalankan
-   Function serverless; file database lokal tidak persisten dan dapat
-   menyebabkan Function gagal saat startup.
+   Function serverless; file database lokal tidak persisten. Tanpa
+   `DATABASE_URL`, halaman utama tetap bisa dibuka, tetapi API akan membalas
+   `503` sampai koneksi PostgreSQL dikonfigurasi.
 6. Pilih environment **Production** (tambahkan **Preview** bila diperlukan),
    simpan variabel, lalu lakukan **Redeploy**. Push berikutnya ke `main` akan
    otomatis membuat deployment Production.

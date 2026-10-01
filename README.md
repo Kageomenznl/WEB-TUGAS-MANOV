@@ -37,7 +37,10 @@ hubungkan root repositori ini dan atur variabel lingkungan produksi:
 - `ADMIN_API_KEY` — kunci acak untuk pengaturan admin.
 
 Jangan gunakan SQLite untuk deployment serverless: filesystem Function tidak
-menyimpan perubahan secara permanen. Buka `/api/health` pada domain setelah
+menyimpan perubahan secara permanen. Backend menginisialisasi database saat
+permintaan API pertama, jadi halaman utama tetap dapat dibuka jika variabel
+database belum disetel; endpoint API akan membalas `503` dengan pesan
+konfigurasi yang perlu diperbaiki. Buka `/api/health` pada domain setelah
 deployment untuk memverifikasi koneksi database.
 
 Ikuti [panduan deployment](README-DEPLOY.md) untuk langkah lebih lengkap.

@@ -4,6 +4,7 @@ import time
 import math
 import hmac
 import secrets
+import threading
 from flask import Flask, jsonify, request, send_from_directory
 
 # ==========================================
@@ -35,7 +36,10 @@ app = Flask(__name__)
 
 DB_FILE = os.path.join(BASE_DIR, "db_kost_manov.db")
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
-IS_PRODUCTION = os.environ.get('ENVIRONMENT', '').lower() == 'production'
+IS_PRODUCTION = (
+    os.environ.get('ENVIRONMENT', '').lower() == 'production'
+    or os.environ.get('VERCEL') == '1'
+)
 DEFAULT_TARIF = 1500 # Rp per kWh
 ROOMS = (
     ('01', 'Yakop'),
@@ -50,6 +54,10 @@ MAX_INTEGRATION_SECONDS = 60
 # ==========================================
 # DATABASE
 # ==========================================
+class DatabaseConfigurationError(RuntimeError):
+    pass
+
+
 class DatabaseConnection:
     def __init__(self, connection, postgres=False):
         self.connection = connection
@@ -93,7 +101,10 @@ def get_db_connection():
         return DatabaseConnection(connection, postgres=True)
 
     if IS_PRODUCTION:
-        raise RuntimeError('DATABASE_URL wajib disetel saat ENVIRONMENT=production.')
+        raise DatabaseConfigurationError(
+            'DATABASE_URL belum dikonfigurasi. Tambahkan connection string PostgreSQL '
+            'pada environment variables deployment.'
+        )
     connection = sqlite3.connect(DB_FILE, timeout=10)
     connection.row_factory = sqlite3.Row
     return DatabaseConnection(connection)
@@ -218,6 +229,24 @@ def handle_cors_preflight():
     if origin not in allowed_origins():
         return jsonify({'error': 'Origin tidak diizinkan.'}), 403
     return '', 204
+
+
+_database_initialized = False
+_database_initialization_lock = threading.Lock()
+
+
+@app.before_request
+def initialize_database_for_api():
+    global _database_initialized
+    if not request.path.startswith('/api/'):
+        return None
+
+    if not _database_initialized:
+        with _database_initialization_lock:
+            if not _database_initialized:
+                init_db()
+                _database_initialized = True
+    return None
 
 
 @app.after_request
@@ -424,6 +453,13 @@ def handle_server_error(error):
     app.logger.exception("Unhandled dashboard error", exc_info=error)
     return jsonify({'error': 'Terjadi kesalahan internal pada server.'}), 500
 
+
+@app.errorhandler(DatabaseConfigurationError)
+def handle_database_configuration_error(error):
+    app.logger.error("Database configuration error: %s", error)
+    return jsonify({'error': str(error)}), 503
+
+
 # ==========================================
 # MAIN EXECUTION
 # ==========================================
@@ -431,6 +467,7 @@ if __name__ == '__main__':
     print("==========================================")
     print("Menyiapkan Database...")
     init_db()
+    _database_initialized = True
 
     print("==========================================")
     print("WEB MONITORING SIAP!")

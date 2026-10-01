@@ -93,7 +93,16 @@ adminModal.addEventListener('click', (event) => {
 const loadData = async () => {
     try {
         const response = await fetch(apiUrl('/api/data'));
-        if (!response.ok) throw new Error('Data pemantauan tidak dapat dimuat.');
+        if (!response.ok) {
+            let message = `Data pemantauan tidak dapat dimuat (${response.status}).`;
+            try {
+                const result = await response.json();
+                if (result.error) message = result.error;
+            } catch (error) {
+                console.error('Respons error API bukan JSON yang valid.', error);
+            }
+            throw new Error(message);
+        }
         const data = await response.json();
 
         document.getElementById('display-tarif').innerText = formatRp(data.tarif_per_kwh);
@@ -174,7 +183,7 @@ const loadData = async () => {
     } catch (error) {
         const container = document.getElementById('container-kamar');
         if (!container.querySelector('.room-card')) {
-            container.innerHTML = '<p class="loading-message load-error">Data belum dapat dimuat. Mencoba kembali...</p>';
+            container.innerHTML = `<p class="loading-message load-error">${escapeHtml(error.message)} Mencoba kembali...</p>`;
         }
         console.error(error);
     }
