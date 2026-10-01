@@ -18,6 +18,10 @@
     box-sizing: border-box;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 body {
     min-width: 320px;
     min-height: 100vh;
@@ -29,6 +33,42 @@ body {
 
 button {
     font: inherit;
+}
+
+.auth-screen {
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    padding: 24px;
+}
+
+.auth-card {
+    width: min(100%, 420px);
+    padding: 36px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: 0 18px 56px rgba(50, 83, 119, 0.1);
+}
+
+.auth-brand-mark {
+    margin: 0 0 22px;
+}
+
+.auth-card h1 {
+    margin-bottom: 8px;
+}
+
+.auth-description {
+    margin-bottom: 25px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.auth-submit {
+    width: 100%;
+    margin-top: 20px;
 }
 
 .page-shell {
@@ -554,6 +594,10 @@ h1 {
     backdrop-filter: blur(5px);
 }
 
+.admin-confirmation {
+    z-index: 11;
+}
+
 .tenant-modal {
     position: relative;
     width: min(100%, 420px);
@@ -707,6 +751,10 @@ h1 {
 
     .tenant-modal {
         padding: 26px 22px;
+    }
+
+    .auth-card {
+        padding: 28px 22px;
     }
 }
 

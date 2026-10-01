@@ -5,7 +5,9 @@ import math
 import hmac
 import secrets
 import threading
+from datetime import timedelta
 from flask import Flask, jsonify, request, send_from_directory
+from flask import session
 
 # ==========================================
 # KONFIGURASI APLIKASI
@@ -32,14 +34,23 @@ def load_local_environment():
 
 load_local_environment()
 
-app = Flask(__name__)
-
-DB_FILE = os.path.join(BASE_DIR, "db_kost_manov.db")
-DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 IS_PRODUCTION = (
     os.environ.get('ENVIRONMENT', '').lower() == 'production'
     or os.environ.get('VERCEL') == '1'
 )
+app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY') or (
+    None if IS_PRODUCTION else secrets.token_hex(32)
+)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+)
+
+DB_FILE = os.path.join(BASE_DIR, "db_kost_manov.db")
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 DEFAULT_TARIF = 1500 # Rp per kWh
 ROOMS = (
     ('01', 'Yakop'),
@@ -198,6 +209,34 @@ def init_db():
     conn.close()
     print(f"[DB] Database siap di: {DB_FILE}")
 
+
+_database_initialized = False
+_database_initialization_lock = threading.Lock()
+
+
+def ensure_database_initialized():
+    global _database_initialized
+    if _database_initialized:
+        return
+    with _database_initialization_lock:
+        if not _database_initialized:
+            init_db()
+            _database_initialized = True
+
+
+def auth_configuration_error():
+    missing = []
+    if not app.secret_key:
+        missing.append('FLASK_SECRET_KEY')
+    if not os.environ.get('SITE_LOGIN_PASSWORD'):
+        missing.append('SITE_LOGIN_PASSWORD')
+    if missing:
+        return jsonify({
+            'error': f'Konfigurasi login belum lengkap. Atur: {", ".join(missing)}.'
+        }), 503
+    return None
+
+
 # ==========================================
 # ROUTING & API FLASK
 # ==========================================
@@ -213,6 +252,7 @@ def frontend_assets(filename):
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
+    ensure_database_initialized()
     conn = get_db_connection()
     try:
         conn.execute("SELECT 1")
@@ -231,21 +271,21 @@ def handle_cors_preflight():
     return '', 204
 
 
-_database_initialized = False
-_database_initialization_lock = threading.Lock()
-
-
 @app.before_request
-def initialize_database_for_api():
-    global _database_initialized
-    if not request.path.startswith('/api/'):
-        return None
-
-    if not _database_initialized:
-        with _database_initialization_lock:
-            if not _database_initialized:
-                init_db()
-                _database_initialized = True
+def require_site_login():
+    public_paths = {
+        '/api/auth/status',
+        '/api/login',
+        '/api/logout',
+        '/api/health',
+        '/api/sensor/reading',
+    }
+    if request.path.startswith('/api/') and request.path not in public_paths:
+        configuration_error = auth_configuration_error()
+        if configuration_error:
+            return configuration_error
+        if not session.get('site_authenticated'):
+            return jsonify({'error': 'Silakan login terlebih dahulu.'}), 401
     return None
 
 
@@ -255,7 +295,8 @@ def add_cors_headers(response):
     if origin in allowed_origins():
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Admin-Key, X-Sensor-Key'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Sensor-Key'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Max-Age'] = '600'
         response.headers.add('Vary', 'Origin')
     return response
@@ -287,14 +328,61 @@ def require_api_key(environment_variable, header_name):
 
 @app.route('/api/admin/verify', methods=['POST'])
 def verify_admin_access():
-    auth_error = require_api_key('ADMIN_API_KEY', 'X-Admin-Key')
-    if auth_error:
-        return auth_error
+    if not session.get('site_authenticated'):
+        return jsonify({'error': 'Silakan login terlebih dahulu.'}), 401
+
+    admin_key = os.environ.get('ADMIN_API_KEY', '')
+    if not admin_key:
+        return jsonify({'error': 'ADMIN_API_KEY belum dikonfigurasi di environment Vercel.'}), 503
+
+    data = request.get_json(silent=True)
+    supplied_key = data.get('password') if isinstance(data, dict) else None
+    if not isinstance(supplied_key, str) or not hmac.compare_digest(supplied_key, admin_key):
+        session.pop('admin_verified', None)
+        return jsonify({'error': 'Sandi admin tidak valid.'}), 401
+
+    session['admin_verified'] = True
+    return jsonify({'status': 'sukses'})
+
+
+@app.route('/api/auth/status', methods=['GET'])
+def auth_status():
+    configuration_error = auth_configuration_error()
+    if configuration_error:
+        return configuration_error
+    return jsonify({'authenticated': bool(session.get('site_authenticated'))})
+
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    configuration_error = auth_configuration_error()
+    if configuration_error:
+        return configuration_error
+
+    data = request.get_json(silent=True)
+    password = data.get('password') if isinstance(data, dict) else None
+    configured_password = os.environ['SITE_LOGIN_PASSWORD']
+    if not isinstance(password, str) or not hmac.compare_digest(password, configured_password):
+        return jsonify({'error': 'Kata sandi tidak valid.'}), 401
+
+    session.clear()
+    session.permanent = True
+    session['site_authenticated'] = True
+    return jsonify({'status': 'sukses'})
+
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    configuration_error = auth_configuration_error()
+    if configuration_error:
+        return configuration_error
+    session.clear()
     return jsonify({'status': 'sukses'})
 
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
+    ensure_database_initialized()
     conn = get_db_connection()
     try:
         tarif = float(conn.execute("SELECT value FROM settings WHERE key='tarif'").fetchone()['value'])
@@ -366,6 +454,7 @@ def receive_sensor_reading():
             return jsonify({'status': 'gagal', 'error': f'{field} di luar rentang yang diizinkan.'}), 400
         readings[field] = float(value)
 
+    ensure_database_initialized()
     waktu_baca = time.time()
     conn = get_db_connection()
     try:
@@ -404,9 +493,8 @@ def receive_sensor_reading():
 
 @app.route('/api/kamar/<nomor>/penghuni', methods=['PUT'])
 def update_tenant(nomor):
-    auth_error = require_api_key('ADMIN_API_KEY', 'X-Admin-Key')
-    if auth_error:
-        return auth_error
+    if not session.pop('admin_verified', False):
+        return jsonify({'error': 'Masukkan sandi admin sebelum mengubah nama penghuni.'}), 401
 
     if nomor not in {room[0] for room in ROOMS}:
         return jsonify({'status': 'gagal', 'error': 'Nomor kamar harus 01 sampai 05.'}), 404
@@ -416,6 +504,7 @@ def update_tenant(nomor):
     if not isinstance(nama, str) or not nama.strip() or len(nama.strip()) > 80:
         return jsonify({'status': 'gagal', 'error': 'Nama penghuni wajib diisi (maksimal 80 karakter).'}), 400
 
+    ensure_database_initialized()
     conn = get_db_connection()
     try:
         result = conn.execute(
@@ -431,13 +520,13 @@ def update_tenant(nomor):
 
 @app.route('/api/tarif', methods=['POST'])
 def set_tarif():
-    auth_error = require_api_key('ADMIN_API_KEY', 'X-Admin-Key')
-    if auth_error:
-        return auth_error
+    if not session.pop('admin_verified', False):
+        return jsonify({'error': 'Masukkan sandi admin sebelum mengubah tarif.'}), 401
 
     data = request.get_json(silent=True)
     tarif_baru = data.get('tarif') if isinstance(data, dict) else None
     if isinstance(tarif_baru, (int, float)) and not isinstance(tarif_baru, bool) and math.isfinite(tarif_baru) and tarif_baru > 0:
+        ensure_database_initialized()
         conn = get_db_connection()
         try:
             conn.execute("UPDATE settings SET value=? WHERE key='tarif'", (str(tarif_baru),))

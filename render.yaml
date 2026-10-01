@@ -11,6 +11,10 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: SITE_LOGIN_PASSWORD
+        sync: false
       - key: ALLOWED_ORIGINS
         sync: false
       - key: SENSOR_API_KEY

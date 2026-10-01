@@ -19,8 +19,12 @@
 4. Di **Project Settings → Environment Variables**, tambahkan:
    - `ENVIRONMENT` = `production`
    - `DATABASE_URL` = connection string PostgreSQL dari langkah pertama.
+   - `FLASK_SECRET_KEY` = rahasia acak panjang untuk sesi login. Buat dengan
+     `python -c "import secrets; print(secrets.token_hex(32))"` di komputer
+     sendiri dan simpan langsung di Vercel; jangan masukkan ke Git.
+   - `SITE_LOGIN_PASSWORD` = kata sandi untuk membuka dashboard.
    - `SENSOR_API_KEY` = kunci acak yang kuat untuk ESP32.
-   - `ADMIN_API_KEY` = kunci acak yang berbeda untuk akses admin.
+   - `ADMIN_API_KEY` = sandi admin, berbeda dari kata sandi login.
 5. Jangan isi `DATABASE_URL` dengan alamat file SQLite. Vercel menjalankan
    Function serverless; file database lokal tidak persisten. Tanpa
    `DATABASE_URL`, halaman utama tetap bisa dibuka, tetapi API akan membalas
@@ -34,6 +38,8 @@
 8. Dashboard dan API menggunakan domain yang sama, jadi CORS tidak diperlukan.
    Set `ALLOWED_ORIGINS` hanya jika dashboard nantinya di-host pada domain
    terpisah.
+9. Dashboard meminta login terlebih dahulu. Sesi login berlaku delapan jam.
+   Setiap kali menyimpan nama penghuni atau tarif, masukkan sandi admin lagi.
 
 Setelah deploy, ESP32 mengirim data ke
 `https://<domain-vercel>/api/sensor/reading`. Tetap gunakan header
@@ -41,6 +47,14 @@ Setelah deploy, ESP32 mengirim data ke
 menaruh keduanya di source code.
 
 ## Opsi: dashboard Netlify dan API Render
+
+Opsi ini memerlukan cookie login same-site dan penyesuaian domain/CORS. Untuk
+setup yang mudah dan sudah didukung tanpa konfigurasi tambahan, deploy aplikasi
+penuh di Vercel seperti langkah di atas; domain frontend dan API akan sama.
+Jika memakai Netlify + Render, gunakan domain kustom HTTPS di bawah domain
+induk yang sama untuk dashboard dan API, lalu isi `ALLOWED_ORIGINS` dengan
+origin dashboard yang tepat. Domain bawaan `netlify.app` dan `onrender.com`
+berbeda site, sehingga cookie login dapat diblokir oleh browser.
 
 Jika memilih hosting terpisah, siapkan database PostgreSQL terlebih dahulu.
 
@@ -56,10 +70,12 @@ Jika memilih hosting terpisah, siapkan database PostgreSQL terlebih dahulu.
    pilih subdomain site yang ingin dipakai, misalnya
    `https://monitor-energi-kost.netlify.app`.
 2. Di Render, pilih **New + → Blueprint** dan hubungkan repositori.
-3. Masukkan connection string Neon saat Render meminta `DATABASE_URL`, dan
-   origin Netlify pilihanmu saat meminta `ALLOWED_ORIGINS`.
-4. `render.yaml` membuat `SENSOR_API_KEY` dan `ADMIN_API_KEY` secara acak.
-   Simpan keduanya dari Render sebagai secret.
+3. Masukkan connection string Neon saat Render meminta `DATABASE_URL`, origin
+   Netlify pilihanmu saat meminta `ALLOWED_ORIGINS`, dan kata sandi login saat
+   meminta `SITE_LOGIN_PASSWORD`.
+4. `render.yaml` membuat `FLASK_SECRET_KEY` dan `SENSOR_API_KEY` secara acak.
+   Atur `ADMIN_API_KEY` di Render ke sandi admin yang dipilih, lalu simpan
+   seluruh nilai sebagai environment variables rahasia.
 5. Pastikan `https://<nama-service>.onrender.com/api/health` membalas
    `{"status":"ok"}`.
 
@@ -76,9 +92,8 @@ Jika memilih hosting terpisah, siapkan database PostgreSQL terlebih dahulu.
 5. Dashboard memperbarui data setiap tiga detik. Untuk pemantauan kontinu tanpa
    jeda, gunakan tier hosting backend yang selalu aktif; service gratis bisa
    tidur saat lama tidak aktif.
-6. Tekan **Akses admin** pada dashboard, lalu masukkan `ADMIN_API_KEY` dari
-   Render untuk mengganti penghuni atau tarif. Kunci hanya disimpan di sesi
-   browser saat ini.
+6. Dashboard memerlukan login. Untuk mengubah penghuni atau tarif, masukkan
+   kembali sandi admin setiap kali menyimpan perubahan.
 
 ## Sambungkan ESP32
 

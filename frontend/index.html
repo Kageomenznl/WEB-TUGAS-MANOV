@@ -8,10 +8,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/style.css?v=6">
+    <link rel="stylesheet" href="/assets/style.css?v=9">
 </head>
 <body>
-    <main class="page-shell">
+    <main class="auth-screen" id="auth-screen">
+        <section class="auth-card" aria-labelledby="login-title">
+            <div class="brand-mark auth-brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M13.2 2.8 5.9 13h5.2l-.4 8.2L18.1 11h-5.2l.3-8.2Z" fill="currentColor"/>
+                </svg>
+            </div>
+            <p class="eyebrow">SMART ENERGY DASHBOARD</p>
+            <h1 id="login-title">Login monitor energi</h1>
+            <p class="auth-description">Masuk untuk melihat pemakaian listrik kamar.</p>
+            <form id="login-form">
+                <label class="field-label" for="login-password">Kata sandi</label>
+                <input class="text-input" id="login-password" type="password" autocomplete="current-password" required>
+                <p class="form-error" id="login-error" role="alert" hidden></p>
+                <button class="button button-secondary auth-submit" id="login-submit" type="submit">Masuk</button>
+            </form>
+        </section>
+    </main>
+
+    <main class="page-shell" id="dashboard" hidden>
         <header class="page-header">
             <div class="brand">
                 <div class="brand-mark" aria-hidden="true">
@@ -38,7 +57,7 @@
                     </div>
                     <button class="button button-secondary" type="button" onclick="ubahTarif()">Atur tarif</button>
                 </div>
-                <button class="button button-admin" id="admin-access" type="button">Akses admin</button>
+                <button class="button button-quiet" id="site-logout" type="button">Keluar</button>
             </div>
         </header>
 
@@ -101,19 +120,19 @@
         </section>
     </div>
 
-    <div class="modal-backdrop" id="admin-modal" hidden>
+    <div class="modal-backdrop admin-confirmation" id="admin-modal" hidden>
         <section class="tenant-modal" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
             <button class="modal-close" id="admin-cancel-icon" type="button" aria-label="Tutup">×</button>
             <p class="eyebrow">AKSES TERBATAS</p>
-            <h2 id="admin-modal-title">Buka akses admin</h2>
-            <p class="modal-description">Masukkan kunci admin dari pengaturan backend untuk mengubah nama penghuni atau tarif.</p>
+            <h2 id="admin-modal-title">Konfirmasi perubahan</h2>
+            <p class="modal-description">Masukkan sandi admin untuk mengonfirmasi perubahan nama atau tarif.</p>
             <form id="admin-form">
-                <label class="field-label" for="admin-key">Kunci admin</label>
+                <label class="field-label" for="admin-key">Sandi admin</label>
                 <input class="text-input" id="admin-key" type="password" autocomplete="current-password" required>
                 <p class="form-error" id="admin-error" role="alert" hidden></p>
                 <div class="modal-actions">
                     <button class="button button-quiet" id="admin-cancel" type="button">Batal</button>
-                    <button class="button button-secondary" type="submit">Buka akses</button>
+                    <button class="button button-secondary" type="submit">Konfirmasi</button>
                 </div>
             </form>
         </section>
@@ -137,7 +156,7 @@
         </section>
     </div>
 
-    <script src="/assets/config.js?v=6"></script>
-    <script src="/assets/script.js?v=6"></script>
+    <script src="/assets/config.js?v=9"></script>
+    <script src="/assets/script.js?v=9"></script>
 </body>
 </html>

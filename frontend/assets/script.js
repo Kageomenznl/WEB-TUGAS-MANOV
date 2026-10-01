@@ -1,6 +1,9 @@
 const apiBaseUrl = (window.MONITOR_CONFIG?.apiBaseUrl || '').replace(/\/+$/, '');
 const apiUrl = (path) => `${apiBaseUrl}${path}`;
-const adminSessionKey = 'monitorAdminKey';
+const apiFetch = (path, options = {}) => fetch(apiUrl(path), {
+    credentials: 'include',
+    ...options
+});
 
 const formatRp = (angka) => new Intl.NumberFormat('id-ID', {
     minimumFractionDigits: 0
@@ -15,20 +18,14 @@ const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => (
 })[character]);
 
 const sensorHasReading = (kmr) => kmr.last_reading_at > 0;
-const getAdminKey = () => sessionStorage.getItem(adminSessionKey) || '';
 const adminModal = document.getElementById('admin-modal');
 const adminKeyInput = document.getElementById('admin-key');
 let resolveAdminAccess = null;
-
-const syncAdminButton = () => {
-    const button = document.getElementById('admin-access');
-    const unlocked = Boolean(getAdminKey());
-    button.innerText = unlocked ? 'Kunci admin' : 'Akses admin';
-    button.classList.toggle('is-unlocked', unlocked);
-};
+let dashboardRefreshTimer = null;
 
 const closeAdminModal = (granted = false) => {
     adminModal.hidden = true;
+    adminKeyInput.value = '';
     if (resolveAdminAccess) resolveAdminAccess(granted);
     resolveAdminAccess = null;
 };
@@ -41,23 +38,6 @@ const requestAdminKey = () => new Promise((resolve) => {
     adminKeyInput.focus();
 });
 
-const adminFetch = async (url, options) => {
-    const send = () => fetch(url, {
-        ...options,
-        headers: {
-            ...options.headers,
-            'X-Admin-Key': getAdminKey()
-        }
-    });
-    let response = await send();
-    if (response.status === 401) {
-        sessionStorage.removeItem(adminSessionKey);
-        syncAdminButton();
-        if (await requestAdminKey()) response = await send();
-    }
-    return response;
-};
-
 document.getElementById('admin-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const key = adminKeyInput.value.trim();
@@ -67,14 +47,13 @@ document.getElementById('admin-form').addEventListener('submit', async (event) =
     submitButton.disabled = true;
     error.hidden = true;
     try {
-        const response = await fetch(apiUrl('/api/admin/verify'), {
+        const response = await apiFetch('/api/admin/verify', {
             method: 'POST',
-            headers: { 'X-Admin-Key': key }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: key })
         });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Kunci admin tidak valid.');
-        sessionStorage.setItem(adminSessionKey, key);
-        syncAdminButton();
+        if (!response.ok) throw new Error(result.error || 'Konfirmasi admin gagal.');
         closeAdminModal(true);
     } catch (error) {
         document.getElementById('admin-error').innerText = error.message;
@@ -90,9 +69,74 @@ adminModal.addEventListener('click', (event) => {
     if (event.target === adminModal) closeAdminModal();
 });
 
+const authScreen = document.getElementById('auth-screen');
+const dashboard = document.getElementById('dashboard');
+const loginForm = document.getElementById('login-form');
+const loginPassword = document.getElementById('login-password');
+const loginError = document.getElementById('login-error');
+
+const showDashboard = () => {
+    authScreen.hidden = true;
+    dashboard.hidden = false;
+    loadData();
+    if (!dashboardRefreshTimer) dashboardRefreshTimer = window.setInterval(loadData, 3000);
+};
+
+loginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submitButton = document.getElementById('login-submit');
+    submitButton.disabled = true;
+    loginError.hidden = true;
+    try {
+        const response = await apiFetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: loginPassword.value })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Login gagal.');
+        loginPassword.value = '';
+        showDashboard();
+    } catch (error) {
+        loginError.innerText = error.message;
+        loginError.hidden = false;
+    } finally {
+        submitButton.disabled = false;
+    }
+});
+
+document.getElementById('site-logout').addEventListener('click', async () => {
+    if (dashboardRefreshTimer) window.clearInterval(dashboardRefreshTimer);
+    dashboardRefreshTimer = null;
+    try {
+        const response = await apiFetch('/api/logout', { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Logout gagal.');
+        dashboard.hidden = true;
+        authScreen.hidden = false;
+        loginPassword.value = '';
+        loginPassword.focus();
+    } catch (error) {
+        console.error(error);
+    }
+});
+
+const checkLoginStatus = async () => {
+    try {
+        const response = await apiFetch('/api/auth/status');
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Status login tidak dapat diperiksa.');
+        if (result.authenticated) showDashboard();
+    } catch (error) {
+        loginError.innerText = error.message;
+        loginError.hidden = false;
+        console.error(error);
+    }
+};
+
 const loadData = async () => {
     try {
-        const response = await fetch(apiUrl('/api/data'));
+        const response = await apiFetch('/api/data');
         if (!response.ok) {
             let message = `Data pemantauan tidak dapat dimuat (${response.status}).`;
             try {
@@ -228,7 +272,8 @@ tenantForm.addEventListener('submit', async (event) => {
     saveButton.disabled = true;
     tenantError.hidden = true;
     try {
-        const response = await adminFetch(apiUrl(`/api/kamar/${encodeURIComponent(editingRoom)}/penghuni`), {
+        if (!await requestAdminKey()) return;
+        const response = await apiFetch(`/api/kamar/${encodeURIComponent(editingRoom)}/penghuni`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ penghuni: tenantName.value })
@@ -274,7 +319,8 @@ tariffForm.addEventListener('submit', async (event) => {
     tariffError.hidden = true;
 
     try {
-        const response = await adminFetch(apiUrl('/api/tarif'), {
+        if (!await requestAdminKey()) return;
+        const response = await apiFetch('/api/tarif', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tarif: Number(tariffInput.value) })
@@ -291,15 +337,4 @@ tariffForm.addEventListener('submit', async (event) => {
     }
 });
 
-document.getElementById('admin-access').addEventListener('click', () => {
-    if (getAdminKey()) {
-        sessionStorage.removeItem(adminSessionKey);
-    } else {
-        requestAdminKey();
-    }
-    syncAdminButton();
-});
-
-syncAdminButton();
-loadData();
-window.setInterval(loadData, 3000);
+checkLoginStatus();
