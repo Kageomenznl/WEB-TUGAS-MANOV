@@ -40,6 +40,9 @@
    terpisah.
 9. Dashboard meminta login terlebih dahulu. Sesi login berlaku delapan jam.
    Setiap kali menyimpan nama penghuni atau tarif, masukkan sandi admin lagi.
+10. Konsumsi dan estimasi tagihan direset otomatis saat periode bulan kalender
+    berganti, mengikuti waktu Jakarta. Reset diproses oleh permintaan dashboard
+    atau pembacaan sensor pertama di bulan baru; tidak perlu menambahkan cron job.
 
 Setelah deploy, ESP32 mengirim data ke
 `https://<domain-vercel>/api/sensor/reading`. Tetap gunakan header

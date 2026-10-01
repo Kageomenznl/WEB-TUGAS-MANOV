@@ -5,7 +5,7 @@ import math
 import hmac
 import secrets
 import threading
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Flask, jsonify, request, send_from_directory
 from flask import session
 
@@ -129,6 +129,11 @@ def calculate_consumption_kwh(power_w, elapsed_seconds):
     return power_w * elapsed_seconds / 3_600_000
 
 
+def current_billing_period():
+    jakarta_now = datetime.now(timezone.utc) + timedelta(hours=7)
+    return jakarta_now.strftime('%Y-%m')
+
+
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
@@ -140,6 +145,10 @@ def init_db():
     c.execute(
         "INSERT INTO settings (key, value) VALUES ('tarif', ?) ON CONFLICT (key) DO NOTHING",
         (str(DEFAULT_TARIF),)
+    )
+    c.execute(
+        "INSERT INTO settings (key, value) VALUES ('billing_period', ?) ON CONFLICT (key) DO NOTHING",
+        (current_billing_period(),)
     )
 
     if conn.postgres:
@@ -222,6 +231,21 @@ def ensure_database_initialized():
         if not _database_initialized:
             init_db()
             _database_initialized = True
+
+
+def ensure_current_billing_period():
+    period = current_billing_period()
+    conn = get_db_connection()
+    try:
+        changed_period = conn.execute(
+            "UPDATE settings SET value=? WHERE key='billing_period' AND value<>?",
+            (period, period)
+        )
+        if changed_period.rowcount:
+            conn.execute("UPDATE kamar SET total_kwh=0, total_biaya=0")
+            conn.commit()
+    finally:
+        conn.close()
 
 
 def auth_configuration_error():
@@ -383,6 +407,7 @@ def logout():
 @app.route('/api/data', methods=['GET'])
 def get_data():
     ensure_database_initialized()
+    ensure_current_billing_period()
     conn = get_db_connection()
     try:
         tarif = float(conn.execute("SELECT value FROM settings WHERE key='tarif'").fetchone()['value'])
@@ -455,6 +480,7 @@ def receive_sensor_reading():
         readings[field] = float(value)
 
     ensure_database_initialized()
+    ensure_current_billing_period()
     waktu_baca = time.time()
     conn = get_db_connection()
     try:
