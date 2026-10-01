@@ -1,14 +1,47 @@
-# Deploy dashboard Netlify + API Render + PostgreSQL Neon
+# Deploy WEB-TUGAS-MANOV
 
 ## Gambaran sistem
 
-- Netlify menayangkan dashboard statis dari folder `frontend`.
-- Render menjalankan API Flask dari folder ini.
-- Neon PostgreSQL menyimpan nama penghuni, pembacaan sensor, konsumsi, dan tarif.
-- ESP32 mengirim data pembacaan langsung ke API Render melalui HTTPS.
+- Vercel dapat menjalankan dashboard dan API Flask dalam satu deployment.
+- PostgreSQL eksternal menyimpan nama penghuni, pembacaan sensor, konsumsi, dan tarif.
+- ESP32 mengirim data pembacaan ke API melalui HTTPS.
 - Sensor dan admin memakai kunci akses yang berbeda. Jangan commit kunci ke Git.
 
-## 1. Siapkan database PostgreSQL
+## Deploy aplikasi penuh ke Vercel
+
+1. Buat database PostgreSQL persisten, misalnya project di Neon, lalu salin
+   connection string PostgreSQL ber-SSL.
+2. Di Vercel, impor repositori `Kageomenznl/WEB-TUGAS-MANOV`. Gunakan root
+   repositori sebagai **Root Directory**; jangan pilih folder `frontend`,
+   karena backend Flask dan dependensinya ada di root.
+3. Biarkan Vercel mendeteksi framework Flask secara otomatis. `vercel.json`
+   menyertakan file frontend yang dibaca Flask saat melayani dashboard.
+4. Di **Project Settings → Environment Variables**, tambahkan:
+   - `ENVIRONMENT` = `production`
+   - `DATABASE_URL` = connection string PostgreSQL dari langkah pertama.
+   - `SENSOR_API_KEY` = kunci acak yang kuat untuk ESP32.
+   - `ADMIN_API_KEY` = kunci acak yang berbeda untuk akses admin.
+5. Jangan isi `DATABASE_URL` dengan alamat file SQLite. Vercel menjalankan
+   Function serverless; file database lokal tidak persisten dan dapat
+   menyebabkan Function gagal saat startup.
+6. Pilih environment **Production** (tambahkan **Preview** bila diperlukan),
+   simpan variabel, lalu lakukan **Redeploy**. Push berikutnya ke `main` akan
+   otomatis membuat deployment Production.
+7. Verifikasi `https://<domain-vercel>/api/health` membalas
+   `{"status":"ok"}`. Jika belum, buka deployment **Functions → Logs** untuk
+   melihat error koneksi PostgreSQL atau environment yang belum diatur.
+8. Dashboard dan API menggunakan domain yang sama, jadi CORS tidak diperlukan.
+   Set `ALLOWED_ORIGINS` hanya jika dashboard nantinya di-host pada domain
+   terpisah.
+
+Setelah deploy, ESP32 mengirim data ke
+`https://<domain-vercel>/api/sensor/reading`. Tetap gunakan header
+`X-Sensor-Key` dan `ADMIN_API_KEY` yang telah disetel di Vercel; jangan
+menaruh keduanya di source code.
+
+## Opsi: dashboard Netlify dan API Render
+
+Jika memilih hosting terpisah, siapkan database PostgreSQL terlebih dahulu.
 
 1. Buat project PostgreSQL di Neon.
 2. Salin connection string PostgreSQL dengan SSL, biasanya diawali
@@ -16,7 +49,7 @@
 3. Simpan URL ini untuk konfigurasi Render. URL tersebut berisi password;
    jangan masukkan ke source code atau repositori.
 
-## 2. Deploy API ke Render
+### Deploy API ke Render
 
 1. Jadikan isi folder proyek ini sebagai root repositori GitHub. Di Netlify,
    pilih subdomain site yang ingin dipakai, misalnya
@@ -29,7 +62,7 @@
 5. Pastikan `https://<nama-service>.onrender.com/api/health` membalas
    `{"status":"ok"}`.
 
-## 3. Deploy dashboard ke Netlify
+### Deploy dashboard ke Netlify
 
 1. Buat site Netlify dari repositori yang sama dan tetapkan nama site seperti
    origin yang diizinkan di Render. `netlify.toml` mengatur build dan publish.
@@ -46,9 +79,11 @@
    Render untuk mengganti penghuni atau tarif. Kunci hanya disimpan di sesi
    browser saat ini.
 
-## 4. Sambungkan ESP32
+## Sambungkan ESP32
 
-- URL tujuan: `https://<nama-service>.onrender.com/api/sensor/reading`
+- URL tujuan:
+  - Vercel: `https://<domain-vercel>/api/sensor/reading`
+  - Render: `https://<nama-service>.onrender.com/api/sensor/reading`
 - Kirim HTTP POST JSON setiap 3–5 detik:
 
   ```json
@@ -62,7 +97,7 @@
 
 - Header request:
   - `Content-Type: application/json`
-  - `X-Sensor-Key: <SENSOR_API_KEY>` dari Render.
+  - `X-Sensor-Key: <SENSOR_API_KEY>` dari layanan backend.
 - `nomor` harus berupa string `"01"` sampai `"05"`. `power_factor` opsional,
   default `1.0`.
 - Atur SSID, password Wi-Fi, alamat API, nomor kamar, pemetaan pin, faktor
@@ -78,7 +113,7 @@ didapatkan dari sensor:
 WiFiClientSecure client;
 client.setCACert(rootCaCertificate);
 HTTPClient http;
-http.begin(client, "https://<nama-service>.onrender.com/api/sensor/reading");
+http.begin(client, "https://<domain-api>/api/sensor/reading");
 http.addHeader("Content-Type", "application/json");
 http.addHeader("X-Sensor-Key", "<SENSOR_API_KEY>");
 String body = "{\"nomor\":\"01\",\"voltage_v\":" + String(voltage, 2)
@@ -88,8 +123,8 @@ int responseCode = http.POST(body);
 http.end();
 ```
 
-Ganti URL, token, sertifikat CA, nomor kamar, nama variabel bacaan, Wi-Fi, pin,
-dan faktor kalibrasi sesuai perangkatmu. Jangan unggah password Wi-Fi atau
+Ganti URL domain API, token, sertifikat CA, nomor kamar, nama variabel bacaan,
+Wi-Fi, pin, dan faktor kalibrasi sesuai perangkatmu. Jangan unggah password Wi-Fi atau
 `SENSOR_API_KEY` ke repositori publik. Token ESP32 berbeda dari `ADMIN_API_KEY`.
 
 Sebelum perangkat tersedia, endpoint dapat diuji dari PowerShell:
@@ -102,11 +137,11 @@ $body = @{
   current_a = 0.5
   power_factor = 0.95
 } | ConvertTo-Json
-Invoke-RestMethod -Uri 'https://<nama-service>.onrender.com/api/sensor/reading' `
+Invoke-RestMethod -Uri 'https://<domain-api>/api/sensor/reading' `
   -Method Post -Headers $headers -ContentType 'application/json' -Body $body
 ```
 
-SQLite lokal dipakai saat menjalankan prototipe di laptop. Untuk Netlify dan
-backend online, database harus PostgreSQL dengan persistence aktif. Blueprint
-memakai Render Free untuk prototipe; layanan gratis dapat tidur, sehingga
+SQLite lokal dipakai saat menjalankan prototipe di laptop. Untuk Vercel atau
+backend online, gunakan database PostgreSQL dengan persistence aktif. Blueprint
+Render memakai paket Free untuk prototipe; layanan gratis dapat tidur, sehingga
 gunakan hosting backend selalu aktif bila sensor perlu dipantau tanpa jeda.

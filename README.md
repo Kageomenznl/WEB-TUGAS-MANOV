@@ -27,8 +27,19 @@ atur `SENSOR_API_KEY` di file `.env` dan kirim JSON ke
 
 ## Deploy
 
-Konfigurasi saat ini memakai Netlify untuk dashboard, Render untuk API, dan
-PostgreSQL untuk database produksi. Ikuti [panduan deployment](README-DEPLOY.md)
-untuk menyiapkan layanan, variabel lingkungan, dan ESP32.
+Proyek dapat dijalankan sebagai satu aplikasi Flask di Vercel dengan database
+PostgreSQL eksternal, atau memakai susunan Netlify + Render. Untuk Vercel,
+hubungkan root repositori ini dan atur variabel lingkungan produksi:
+
+- `ENVIRONMENT=production`
+- `DATABASE_URL` — connection string PostgreSQL persisten, misalnya dari Neon.
+- `SENSOR_API_KEY` — kunci acak untuk ESP32.
+- `ADMIN_API_KEY` — kunci acak untuk pengaturan admin.
+
+Jangan gunakan SQLite untuk deployment serverless: filesystem Function tidak
+menyimpan perubahan secara permanen. Buka `/api/health` pada domain setelah
+deployment untuk memverifikasi koneksi database.
+
+Ikuti [panduan deployment](README-DEPLOY.md) untuk langkah lebih lengkap.
 
 Jangan commit file `.env`, kunci API, password Wi-Fi, atau database lokal.
