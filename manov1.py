@@ -57,7 +57,7 @@ ROOMS = (
     ('02', 'Pian'),
     ('03', 'Rehan'),
     ('04', 'Topek'),
-    ('05', 'Belum diisi'),
+    ('05', ''),
 )
 SENSOR_ONLINE_SECONDS = 15
 MAX_INTEGRATION_SECONDS = 60
@@ -195,6 +195,7 @@ def init_db():
     allowed_rooms = tuple(room[0] for room in ROOMS)
     placeholders = ','.join('?' for _ in allowed_rooms)
     c.execute(f"DELETE FROM kamar WHERE nomor NOT IN ({placeholders})", allowed_rooms)
+    c.execute("UPDATE kamar SET penghuni='' WHERE penghuni='Belum diisi'")
     for room in ROOMS:
         c.execute(
             "INSERT INTO kamar (nomor, penghuni) VALUES (?, ?) ON CONFLICT (nomor) DO NOTHING",
@@ -417,17 +418,30 @@ def get_data():
         total_semua_watt = 0
         total_semua_kwh = 0
         total_semua_biaya = 0
+        pembacaan_bulan_ini = False
+        last_reading_at = 0
         waktu_sekarang = time.time()
+        periode_tagihan = current_billing_period()
 
         for row in kamar_rows:
             k = dict(row)
             k.pop('status_hidup', None)
             k['daya_watt'] = calculate_power_w(k['voltage_v'], k['current_a'], k['power_factor'])
+            k['penghuni'] = '' if k['penghuni'] == 'Belum diisi' else k['penghuni']
             k['biaya_kalkulasi'] = round(k['total_kwh'] * tarif, 2)
             k['sensor_online'] = (
                 k['last_reading_at'] > 0
                 and waktu_sekarang - k['last_reading_at'] <= SENSOR_ONLINE_SECONDS
             )
+            k['has_month_reading'] = (
+                k['last_reading_at'] > 0
+                and (
+                    datetime.fromtimestamp(k['last_reading_at'], timezone.utc)
+                    + timedelta(hours=7)
+                ).strftime('%Y-%m') == periode_tagihan
+            )
+            pembacaan_bulan_ini = pembacaan_bulan_ini or k['has_month_reading']
+            last_reading_at = max(last_reading_at, k['last_reading_at'])
             if k['sensor_online']:
                 total_semua_watt += k['daya_watt']
             total_semua_kwh += k['total_kwh']
@@ -442,8 +456,11 @@ def get_data():
         'summary': {
             'total_watt': round(total_semua_watt, 2),
             'total_kwh': round(total_semua_kwh, 4),
-            'total_biaya': round(total_semua_biaya, 2)
-        }
+            'total_biaya': round(total_semua_biaya, 2),
+            'has_month_reading': pembacaan_bulan_ini,
+            'last_reading_at': last_reading_at
+        },
+        'billing_period': periode_tagihan
     })
 
 @app.route('/api/sensor/reading', methods=['POST'])
@@ -527,22 +544,23 @@ def update_tenant(nomor):
 
     data = request.get_json(silent=True)
     nama = data.get('penghuni') if isinstance(data, dict) else None
-    if not isinstance(nama, str) or not nama.strip() or len(nama.strip()) > 80:
-        return jsonify({'status': 'gagal', 'error': 'Nama penghuni wajib diisi (maksimal 80 karakter).'}), 400
+    if not isinstance(nama, str) or len(nama.strip()) > 80:
+        return jsonify({'status': 'gagal', 'error': 'Nama penghuni maksimal 80 karakter.'}), 400
 
     ensure_database_initialized()
+    nama = nama.strip()
     conn = get_db_connection()
     try:
         result = conn.execute(
             "UPDATE kamar SET penghuni=? WHERE nomor=?",
-            (nama.strip(), nomor)
+            (nama, nomor)
         )
         if result.rowcount == 0:
             return jsonify({'status': 'gagal', 'error': 'Kamar tidak ditemukan.'}), 404
         conn.commit()
     finally:
         conn.close()
-    return jsonify({'status': 'sukses', 'nomor': nomor, 'penghuni': nama.strip()})
+    return jsonify({'status': 'sukses', 'nomor': nomor, 'penghuni': nama})
 
 @app.route('/api/tarif', methods=['POST'])
 def set_tarif():

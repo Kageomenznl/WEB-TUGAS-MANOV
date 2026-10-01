@@ -22,6 +22,65 @@ const adminModal = document.getElementById('admin-modal');
 const adminKeyInput = document.getElementById('admin-key');
 let resolveAdminAccess = null;
 let dashboardRefreshTimer = null;
+const trendHistory = [];
+
+const formatKwh = (value) => Number(value).toLocaleString('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3
+});
+
+const formatReadingTime = (timestamp) => new Date(timestamp * 1000).toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+});
+
+const renderTrend = (watts, hasOnlineSensor) => {
+    const chartEmpty = document.getElementById('chart-empty');
+    const axisLabels = document.getElementById('chart-axis-labels');
+    const line = document.getElementById('trend-line');
+    const dot = document.getElementById('trend-dot');
+    const value = document.getElementById('trend-value');
+    if (!hasOnlineSensor) {
+        chartEmpty.hidden = false;
+        line.setAttribute('points', '');
+        dot.hidden = true;
+        axisLabels.hidden = true;
+        value.innerText = '—';
+        return;
+    }
+
+    const now = Date.now();
+    trendHistory.push({ timestamp: now, watts });
+    while (trendHistory.length > 0 && (
+        now - trendHistory[0].timestamp > 60_000 || trendHistory.length > 21
+    )) {
+        trendHistory.shift();
+    }
+
+    const maxWatts = Math.max(100, ...trendHistory.map((sample) => sample.watts));
+    const axisMax = Math.ceil(maxWatts / 100) * 100;
+    const points = trendHistory.map((sample, index) => {
+        const x = trendHistory.length === 1
+            ? 48
+            : 48 + (index / (trendHistory.length - 1)) * 580;
+        const y = 186 - (sample.watts / axisMax) * 162;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const [lastX, lastY] = points[points.length - 1].split(',');
+    line.setAttribute('points', points.join(' '));
+    dot.setAttribute('cx', lastX);
+    dot.setAttribute('cy', lastY);
+    dot.hidden = false;
+    axisLabels.hidden = false;
+    chartEmpty.hidden = true;
+    value.innerText = watts.toFixed(1);
+    document.getElementById('chart-max').textContent = `${axisMax} W`;
+    document.getElementById('chart-mid-high').textContent = `${Math.round(axisMax * 2 / 3)} W`;
+    document.getElementById('chart-mid-low').textContent = `${Math.round(axisMax / 3)} W`;
+};
 
 const closeAdminModal = (granted = false) => {
     adminModal.hidden = true;
@@ -114,6 +173,7 @@ document.getElementById('site-logout').addEventListener('click', async () => {
         if (!response.ok) throw new Error(result.error || 'Logout gagal.');
         dashboard.hidden = true;
         authScreen.hidden = false;
+        trendHistory.length = 0;
         loginPassword.value = '';
         loginPassword.focus();
     } catch (error) {
@@ -150,56 +210,62 @@ const loadData = async () => {
         const data = await response.json();
 
         document.getElementById('display-tarif').innerText = formatRp(data.tarif_per_kwh);
-        document.getElementById('sum-watt').innerText = data.summary.total_watt.toFixed(1);
-        document.getElementById('sum-kwh').innerText = data.summary.total_kwh.toFixed(4);
-        document.getElementById('sum-biaya').innerText = formatRp(data.summary.total_biaya);
+        const hasOnlineSensor = data.kamar.some((kmr) => kmr.sensor_online);
+        document.getElementById('sum-watt').innerText = hasOnlineSensor
+            ? data.summary.total_watt.toFixed(1)
+            : '—';
+        document.getElementById('sum-watt-unit').hidden = !hasOnlineSensor;
+        document.getElementById('sum-kwh').innerText = data.summary.has_month_reading
+            ? formatKwh(data.summary.total_kwh)
+            : '—';
+        document.getElementById('sum-kwh-unit').hidden = !data.summary.has_month_reading;
+        document.getElementById('sum-biaya').innerText = data.summary.has_month_reading
+            ? formatRp(data.summary.total_biaya)
+            : '—';
+        document.getElementById('sum-biaya-unit').hidden = !data.summary.has_month_reading;
 
         const onlineCount = data.kamar.filter((kmr) => kmr.sensor_online).length;
         const connectionStatus = document.getElementById('sensor-status');
         const statusLabel = document.getElementById('sensor-status-label');
         connectionStatus.classList.toggle('is-online', onlineCount > 0);
         connectionStatus.classList.toggle('is-waiting', onlineCount === 0);
+        const lastReadingAt = data.summary.last_reading_at;
         statusLabel.innerText = onlineCount > 0
-            ? `${onlineCount} dari ${data.kamar.length} sensor terhubung`
-            : 'Menunggu sensor';
+            ? `${onlineCount} dari ${data.kamar.length} sensor terhubung · diperbarui ${formatReadingTime(lastReadingAt)}`
+            : lastReadingAt > 0
+                ? `Sensor offline · pembacaan terakhir ${formatReadingTime(lastReadingAt)}`
+                : 'Belum ada data dari sensor';
+        renderTrend(data.summary.total_watt, hasOnlineSensor);
 
         const container = document.getElementById('container-kamar');
         container.innerHTML = data.kamar.map((kmr) => {
             const online = kmr.sensor_online;
             const hasReading = sensorHasReading(kmr);
-            const updatedAt = hasReading
-                ? new Date(kmr.last_reading_at * 1000).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                })
-                : 'Belum ada pembacaan';
             const reading = (value, digits, unit) => hasReading
                 ? `${Number(value).toFixed(digits)} ${unit}`
-                : `— ${unit}`;
+                : `<span class="no-reading">— ${unit}</span>`;
+            const penghuni = kmr.penghuni?.trim();
+            const isVacant = !penghuni || penghuni === 'Belum diisi';
 
             return `
-                <article class="room-card">
+                <article class="room-card${isVacant ? ' is-vacant' : ''}">
                     <div class="room-heading">
                         <div class="room-identity">
                             <p class="room-kicker">KAMAR ${escapeHtml(kmr.nomor)}</p>
-                            <h3 class="room-title">${escapeHtml(kmr.penghuni || 'Belum diisi')}</h3>
+                            <h3 class="room-title">${escapeHtml(isVacant ? 'Kosong' : penghuni)}</h3>
                         </div>
-                        <button class="edit-tenant" type="button" data-room="${escapeHtml(kmr.nomor)}" aria-label="Ganti nama penghuni kamar ${escapeHtml(kmr.nomor)}">
+                        ${isVacant ? '<span class="vacant-label">KAMAR KOSONG</span>' : ''}
+                        <button class="edit-tenant" type="button" data-room="${escapeHtml(kmr.nomor)}" aria-label="${isVacant ? 'Isi' : 'Ubah'} penghuni kamar ${escapeHtml(kmr.nomor)}" title="${isVacant ? 'Isi kamar' : 'Ubah nama penghuni'}">
                             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m12.9 3.1 4 4M3.5 16.5l3.4-.7L16.5 6.2a2.1 2.1 0 0 0-3-3L3.9 12.8l-.4 3.7Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            <span>Ubah nama</span>
                         </button>
                     </div>
 
                     <div class="room-power">
                         <div>
                             <span class="power-caption">Daya terukur</span>
-                            <p class="power-number">${hasReading ? Number(kmr.daya_watt).toFixed(1) : '—'} <small>W</small></p>
+                            <p class="power-number${hasReading ? '' : ' no-reading'}">${hasReading ? Number(kmr.daya_watt).toFixed(1) : '—'}${hasReading ? ' <small>W</small>' : ''}</p>
                         </div>
-                        <span class="sensor-badge ${online ? 'is-online' : 'is-offline'}">
-                            <span class="connection-dot" aria-hidden="true"></span>
-                            ${online ? 'Terhubung' : 'Menunggu data'}
-                        </span>
+                        ${online ? '<span class="sensor-badge is-online"><span class="connection-dot" aria-hidden="true"></span>Terhubung</span>' : ''}
                     </div>
 
                     <div class="room-metrics">
@@ -213,14 +279,13 @@ const loadData = async () => {
                         </div>
                         <div class="metric">
                             <span>Konsumsi</span>
-                            <strong>${kmr.total_kwh.toFixed(4)} kWh</strong>
+                            <strong>${kmr.has_month_reading ? `${formatKwh(kmr.total_kwh)} kWh` : '<span class="no-reading">—</span>'}</strong>
                         </div>
                         <div class="metric">
                             <span>Estimasi tagihan</span>
-                            <strong class="metric-bill">Rp ${formatRp(kmr.biaya_kalkulasi)}</strong>
+                            <strong class="metric-bill">${kmr.has_month_reading ? `Rp ${formatRp(kmr.biaya_kalkulasi)}` : '<span class="no-reading">—</span>'}</strong>
                         </div>
                     </div>
-                    <p class="room-updated">${hasReading ? `Terakhir diperbarui ${updatedAt}` : updatedAt}</p>
                 </article>
             `;
         }).join('');
@@ -252,7 +317,7 @@ document.getElementById('container-kamar').addEventListener('click', (event) => 
     const currentName = button.closest('.room-card').querySelector('.room-title').innerText;
     editingRoom = room;
     document.getElementById('tenant-room-label').innerText = `Kamar ${room}`;
-    tenantName.value = currentName === 'Belum diisi' ? '' : currentName;
+    tenantName.value = currentName === 'Belum diisi' || currentName === 'Kosong' ? '' : currentName;
     tenantError.hidden = true;
     modal.hidden = false;
     tenantName.focus();

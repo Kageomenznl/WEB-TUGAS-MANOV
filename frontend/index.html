@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/style.css?v=9">
+    <link rel="stylesheet" href="/assets/style.css?v=10">
 </head>
 <body>
     <main class="auth-screen" id="auth-screen">
@@ -46,10 +46,6 @@
             </div>
 
             <div class="header-actions">
-                <div class="connection-status is-waiting" id="sensor-status" role="status">
-                    <span class="connection-dot" aria-hidden="true"></span>
-                    <span id="sensor-status-label">Menunggu sensor</span>
-                </div>
                 <div class="tariff-control">
                     <div class="tariff-info">
                         <span class="tariff-label">Tarif saat ini</span>
@@ -61,6 +57,11 @@
             </div>
         </header>
 
+        <div class="connection-status is-waiting" id="sensor-status" role="status">
+            <span class="connection-dot" aria-hidden="true"></span>
+            <span id="sensor-status-label">Belum ada data sensor</span>
+        </div>
+
         <section class="summary-grid" aria-label="Ringkasan pemakaian">
             <article class="summary-card">
                 <div class="summary-icon power-icon" aria-hidden="true">
@@ -70,23 +71,52 @@
                 </div>
                 <div>
                     <p class="summary-label">Total daya terukur</p>
-                    <p class="summary-value"><span id="sum-watt">0</span><span class="summary-unit"> W</span></p>
+                    <p class="summary-value"><span id="sum-watt">—</span><span class="summary-unit" id="sum-watt-unit"> W</span></p>
                 </div>
             </article>
             <article class="summary-card">
                 <div class="summary-icon energy-icon" aria-hidden="true">kWh</div>
                 <div>
                     <p class="summary-label">Total konsumsi</p>
-                    <p class="summary-value"><span id="sum-kwh">0</span><span class="summary-unit"> kWh</span></p>
+                    <p class="summary-value"><span id="sum-kwh">—</span><span class="summary-unit" id="sum-kwh-unit"> kWh</span></p>
                 </div>
             </article>
             <article class="summary-card">
                 <div class="summary-icon cost-icon" aria-hidden="true">Rp</div>
                 <div>
                     <p class="summary-label">Estimasi total tagihan</p>
-                    <p class="summary-value"><span class="summary-unit">Rp </span><span id="sum-biaya">0</span></p>
+                    <p class="summary-value"><span class="summary-unit" id="sum-biaya-unit">Rp </span><span id="sum-biaya">—</span></p>
                 </div>
             </article>
+        </section>
+
+        <section class="trend-card" aria-labelledby="trend-title">
+            <div class="trend-heading">
+                <div>
+                    <h2 id="trend-title">Tren daya realtime</h2>
+                    <p>Perubahan total daya sensor selama satu menit terakhir.</p>
+                </div>
+                <span class="trend-current"><span id="trend-value">—</span> W</span>
+            </div>
+            <div class="trend-chart">
+                <svg viewBox="0 0 640 220" role="img" aria-labelledby="trend-title trend-description" preserveAspectRatio="none">
+                    <desc id="trend-description">Grafik total daya dari sensor yang sedang terhubung.</desc>
+                    <line class="chart-gridline" x1="48" y1="24" x2="628" y2="24"></line>
+                    <line class="chart-gridline" x1="48" y1="78" x2="628" y2="78"></line>
+                    <line class="chart-gridline" x1="48" y1="132" x2="628" y2="132"></line>
+                    <line class="chart-gridline" x1="48" y1="186" x2="628" y2="186"></line>
+                    <g id="chart-axis-labels" hidden>
+                        <text class="chart-axis-label" id="chart-max" x="40" y="28" text-anchor="end">—</text>
+                        <text class="chart-axis-label" id="chart-mid-high" x="40" y="82" text-anchor="end">—</text>
+                        <text class="chart-axis-label" id="chart-mid-low" x="40" y="136" text-anchor="end">—</text>
+                        <text class="chart-axis-label" x="40" y="190" text-anchor="end">0</text>
+                    </g>
+                    <polyline class="chart-line" id="trend-line" points=""></polyline>
+                    <circle class="chart-point" id="trend-dot" cx="0" cy="0" r="4" hidden></circle>
+                </svg>
+                <p class="chart-empty" id="chart-empty">Grafik akan mulai terisi saat sensor mengirim data.</p>
+            </div>
+            <div class="chart-time-labels"><span>60 detik lalu</span><span>Sekarang</span></div>
         </section>
 
         <section class="rooms-section">
@@ -109,8 +139,8 @@
             <h2 id="tenant-modal-title">Ganti nama penghuni</h2>
             <p class="modal-description" id="tenant-room-label">Kamar 01</p>
             <form id="tenant-form">
-                <label class="field-label" for="tenant-name">Nama penghuni</label>
-                <input class="text-input" id="tenant-name" name="penghuni" type="text" maxlength="80" autocomplete="name" required>
+                <label class="field-label" for="tenant-name">Nama penghuni (kosongkan jika kamar kosong)</label>
+                <input class="text-input" id="tenant-name" name="penghuni" type="text" maxlength="80" autocomplete="name">
                 <p class="form-error" id="tenant-error" role="alert" hidden></p>
                 <div class="modal-actions">
                     <button class="button button-quiet" id="tenant-cancel" type="button">Batal</button>
@@ -156,7 +186,7 @@
         </section>
     </div>
 
-    <script src="/assets/config.js?v=9"></script>
-    <script src="/assets/script.js?v=9"></script>
+    <script src="/assets/config.js?v=10"></script>
+    <script src="/assets/script.js?v=11"></script>
 </body>
 </html>

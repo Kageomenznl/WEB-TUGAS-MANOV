@@ -4,6 +4,8 @@ Dashboard pemantauan konsumsi listrik kamar dengan API Flask dan pembacaan
 sensor ESP32. Dashboard mengambil data dari API dan memperbaruinya setiap tiga
 detik. Konsumsi dan estimasi tagihan direset otomatis setiap tanggal 1
 berdasarkan waktu Jakarta; pembacaan daya dan status sensor tidak dihapus.
+Grafik daya menampilkan tren realtime selama dashboard terbuka (hingga satu
+menit riwayat pada tab tersebut); data grafik tidak disimpan lintas sesi.
 
 ## Menjalankan secara lokal
 
