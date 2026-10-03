@@ -980,3 +980,339 @@ h1 {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* Visual refinement: retain the calm blue palette while strengthening hierarchy. */
+body {
+    background:
+        radial-gradient(ellipse at 8% 0%, rgba(211, 231, 252, 0.58), transparent 34rem),
+        radial-gradient(ellipse at 95% 32%, rgba(230, 240, 251, 0.5), transparent 30rem),
+        #f5f9ff;
+}
+
+.page-shell {
+    width: min(1160px, calc(100% - 56px));
+    padding-top: 42px;
+}
+
+.page-header {
+    gap: 32px;
+    padding-bottom: 26px;
+    border-bottom-color: #e5edf6;
+}
+
+.brand {
+    align-items: center;
+}
+
+.brand-mark {
+    width: 50px;
+    height: 50px;
+    margin-top: 0;
+    box-shadow: inset 0 0 0 1px rgba(91, 147, 211, 0.08);
+}
+
+.eyebrow {
+    letter-spacing: 0.14em;
+}
+
+.page-description,
+.section-heading p {
+    line-height: 1.6;
+}
+
+.header-actions {
+    gap: 10px;
+}
+
+.tariff-control {
+    gap: 20px;
+    padding: 11px 12px 11px 17px;
+    border-radius: 15px;
+    box-shadow: 0 8px 22px rgba(50, 83, 119, 0.055);
+}
+
+.button {
+    min-height: 40px;
+    border-radius: 11px;
+}
+
+.button-quiet {
+    padding: 0 14px;
+}
+
+.connection-status {
+    min-height: 42px;
+    margin-top: 18px;
+    padding: 0 14px;
+    border-radius: 12px;
+    letter-spacing: 0.005em;
+}
+
+.summary-grid {
+    gap: 16px;
+    margin: 16px 0 20px;
+}
+
+.summary-card,
+.trend-card,
+.room-card {
+    border-color: #e7eef6;
+    box-shadow: 0 8px 26px rgba(50, 83, 119, 0.05);
+}
+
+.summary-card {
+    position: relative;
+    min-height: 116px;
+    gap: 15px;
+    overflow: hidden;
+    padding: 22px;
+    border-radius: 17px;
+}
+
+.summary-card::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: #84b2e0;
+    content: "";
+}
+
+.summary-card:nth-child(2)::before {
+    background: #75b7a0;
+}
+
+.summary-card:nth-child(3)::before {
+    background: #d4b16d;
+}
+
+.summary-card:nth-child(2) .summary-icon {
+    color: #4f917b;
+    background: #edf7f3;
+}
+
+.summary-card:nth-child(3) .summary-icon {
+    color: #a9843e;
+    background: #fbf6e9;
+}
+
+.summary-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+}
+
+.summary-label {
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.015em;
+}
+
+.summary-value {
+    font-size: clamp(23px, 2.4vw, 27px);
+}
+
+.trend-card {
+    margin-bottom: 34px;
+    padding: 23px 25px 17px;
+    border-radius: 18px;
+}
+
+.trend-heading h2 {
+    font-size: 18px;
+}
+
+.trend-current {
+    padding: 8px 12px;
+    color: #3978bd;
+    background: #f2f7fd;
+    border: 1px solid #e5eff9;
+    border-radius: 12px;
+    font-size: 13px;
+}
+
+.trend-current #trend-value {
+    font-size: 21px;
+}
+
+.trend-chart {
+    height: 210px;
+    margin-top: 12px;
+}
+
+.chart-line {
+    filter: drop-shadow(0 2px 3px rgba(57, 120, 189, 0.14));
+}
+
+.chart-empty {
+    color: #8797a9;
+}
+
+.chart-time-labels {
+    color: #8999aa;
+}
+
+.section-heading {
+    margin-bottom: 16px;
+}
+
+.section-heading h2 {
+    margin-bottom: 5px;
+    font-size: 19px;
+}
+
+.rooms-grid {
+    gap: 16px;
+}
+
+.room-card {
+    padding: 19px;
+    border-radius: 16px;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.room-card:hover {
+    border-color: #d7e5f3;
+    box-shadow: 0 13px 30px rgba(50, 83, 119, 0.085);
+}
+
+.room-card.is-vacant {
+    background: #fafbfd;
+    border-color: #e6ebf0;
+}
+
+.room-title {
+    font-size: 15px;
+}
+
+.room-power {
+    margin-bottom: 11px;
+    padding: 13px 14px;
+    border-radius: 11px;
+}
+
+.sensor-badge {
+    padding: 6px 9px;
+    color: #43816e;
+    background: #f5fbf8;
+    border-color: #e1f0e9;
+}
+
+.metric {
+    padding: 9px 0;
+}
+
+.metric span {
+    font-size: 10px;
+}
+
+.metric strong {
+    font-size: 12px;
+}
+
+.edit-tenant:hover,
+.button:hover {
+    transform: translateY(-1px);
+}
+
+.edit-tenant:active,
+.button:active {
+    transform: translateY(0);
+}
+
+.edit-tenant {
+    transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.auth-card {
+    border-radius: 22px;
+    box-shadow: 0 22px 64px rgba(50, 83, 119, 0.12);
+}
+
+.text-input {
+    background: #fff;
+}
+
+@media (max-width: 900px) {
+    .page-shell {
+        width: min(100% - 40px, 760px);
+    }
+
+    .summary-card {
+        padding: 19px;
+    }
+}
+
+@media (max-width: 640px) {
+    .page-shell {
+        width: min(100% - 32px, 480px);
+        padding-top: 26px;
+    }
+
+    .page-header {
+        gap: 18px;
+        padding-bottom: 20px;
+    }
+
+    .header-actions {
+        gap: 9px;
+    }
+
+    .connection-status {
+        margin-top: 14px;
+    }
+
+    .summary-grid {
+        gap: 10px;
+        margin: 14px 0 18px;
+    }
+
+    .summary-card {
+        min-height: 92px;
+        padding: 16px 18px;
+        border-radius: 14px;
+    }
+
+    .summary-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .summary-value {
+        font-size: 23px;
+    }
+
+    .trend-card {
+        margin-bottom: 28px;
+        padding: 18px 14px 14px;
+        border-radius: 15px;
+    }
+
+    .trend-heading {
+        align-items: flex-start;
+    }
+
+    .trend-heading p {
+        max-width: 225px;
+    }
+
+    .trend-current {
+        padding: 7px 9px;
+    }
+
+    .trend-current #trend-value {
+        font-size: 19px;
+    }
+
+    .trend-chart {
+        height: 180px;
+    }
+
+    .rooms-grid {
+        gap: 10px;
+    }
+
+    .room-card {
+        padding: 17px;
+        border-radius: 14px;
+    }
+}
