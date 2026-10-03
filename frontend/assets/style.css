@@ -683,10 +683,6 @@ h1 {
     border-bottom: 1px solid #eff3f7;
 }
 
-.metric:nth-last-child(-n + 2) {
-    border-bottom: 0;
-}
-
 .metric span {
     color: #8997a7;
     font-size: 11px;
@@ -1165,9 +1161,19 @@ body {
 }
 
 .room-card {
+    position: relative;
     padding: 19px;
+    overflow: hidden;
     border-radius: 16px;
     transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.room-card::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: #84b2e0;
+    content: "";
 }
 
 .room-card:hover {
@@ -1180,14 +1186,28 @@ body {
     border-color: #e6ebf0;
 }
 
+.room-card.is-vacant::before {
+    background: #c5cdd6;
+}
+
 .room-title {
     font-size: 15px;
 }
 
 .room-power {
+    position: relative;
+    overflow: hidden;
     margin-bottom: 11px;
     padding: 13px 14px;
     border-radius: 11px;
+}
+
+.room-power::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: #84b2e0;
+    content: "";
 }
 
 .sensor-badge {
@@ -1198,15 +1218,71 @@ body {
 }
 
 .metric {
-    padding: 9px 0;
+    display: grid;
+    min-width: 0;
+    min-height: 61px;
+    gap: 6px;
+    padding: 10px 11px;
+    background: #f3f8fe;
+    border: 1px solid #eaf2fb;
+    border-radius: 11px;
+}
+
+.metric:nth-child(2) {
+    background: #f0f8f5;
+    border-color: #e5f1ec;
+}
+
+.metric:nth-child(3) {
+    background: #f0f7f8;
+    border-color: #e3eff0;
+}
+
+.metric:nth-child(4) {
+    background: #fbf7ed;
+    border-color: #f2ecdd;
 }
 
 .metric span {
-    font-size: 10px;
+    color: #6f88a2;
 }
 
-.metric strong {
-    font-size: 12px;
+.metric:nth-child(2) span,
+.metric:nth-child(2) strong {
+    color: #548574;
+}
+
+.metric:nth-child(3) span,
+.metric:nth-child(3) strong {
+    color: #56838a;
+}
+
+.metric:nth-child(4) span,
+.metric:nth-child(4) strong {
+    color: #9a7a40;
+}
+
+.metric strong.metric-bill {
+    color: #9a7a40;
+}
+
+.room-card.is-vacant .metric {
+    background: #f5f6f8;
+    border-color: #eceef1;
+}
+
+.room-card.is-vacant .metric span,
+.room-card.is-vacant .metric strong,
+.room-card.is-vacant .metric strong.metric-bill {
+    color: #8a95a1;
+}
+
+@media (max-width: 640px) {
+    .metric {
+        min-height: 58px;
+        padding: 9px 10px;
+        border-radius: 10px;
+    }
 }
 
 .edit-tenant:hover,
