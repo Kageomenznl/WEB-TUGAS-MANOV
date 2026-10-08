@@ -17,7 +17,6 @@ const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => (
     "'": '&#39;'
 })[character]);
 
-const sensorHasReading = (kmr) => kmr.last_reading_at > 0;
 const adminModal = document.getElementById('admin-modal');
 const adminKeyInput = document.getElementById('admin-key');
 let resolveAdminAccess = null;
@@ -253,7 +252,7 @@ const loadData = async () => {
         const container = document.getElementById('container-kamar');
         container.innerHTML = data.kamar.map((kmr) => {
             const online = kmr.sensor_online;
-            const hasReading = sensorHasReading(kmr);
+            const hasReading = online;
             const reading = (value, digits, unit) => hasReading
                 ? `${Number(value).toFixed(digits)} ${unit}`
                 : `<span class="no-reading">— ${unit}</span>`;
