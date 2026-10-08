@@ -235,6 +235,19 @@ const loadData = async () => {
             : lastReadingAt > 0
                 ? `Sensor offline · pembacaan terakhir ${formatReadingTime(lastReadingAt)}`
                 : 'Belum ada data dari sensor';
+
+        const onlineBoardCount = data.kamar.filter((kmr) => kmr.board_online).length;
+        const boardStatus = document.getElementById('board-status');
+        const boardStatusLabel = document.getElementById('board-status-label');
+        const lastBoardSeenAt = data.summary.last_board_seen_at;
+        boardStatus.classList.toggle('is-online', onlineBoardCount > 0);
+        boardStatus.classList.toggle('is-waiting', onlineBoardCount === 0);
+        boardStatusLabel.innerText = onlineBoardCount > 0
+            ? `${onlineBoardCount} ESP32 terhubung · terakhir terlihat ${formatReadingTime(lastBoardSeenAt)}`
+            : lastBoardSeenAt > 0
+                ? `ESP32 terputus · terakhir terlihat ${formatReadingTime(lastBoardSeenAt)}`
+                : 'ESP32 belum terhubung';
+
         renderTrend(data.summary.total_watt, hasOnlineSensor);
 
         const container = document.getElementById('container-kamar');

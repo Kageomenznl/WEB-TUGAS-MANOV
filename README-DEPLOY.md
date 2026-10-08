@@ -119,6 +119,10 @@ Jika memilih hosting terpisah, siapkan database PostgreSQL terlebih dahulu.
   - `X-Sensor-Key: <SENSOR_API_KEY>` dari layanan backend.
 - `nomor` harus berupa string `"01"` sampai `"05"`. `power_factor` opsional,
   default `1.0`.
+- Sketch ESP32 juga mengirim heartbeat ke
+  `/api/sensor/heartbeat` setiap 5 detik, termasuk saat listrik kamar mati.
+  Dashboard memakai heartbeat ini untuk menunjukkan apakah board masih
+  terhubung; status pembacaan daya tetap ditentukan oleh data sensor.
 - Atur SSID, password Wi-Fi, alamat API, nomor kamar, pemetaan pin, faktor
   kalibrasi sensor, dan variabel tegangan/arus pada sketch ESP32.
 - Library Arduino ESP32: `WiFi.h`, `HTTPClient.h`, dan `WiFiClientSecure.h`.

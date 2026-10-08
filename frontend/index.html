@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/style.css?v=12">
+    <link rel="stylesheet" href="/assets/style.css?v=13">
 </head>
 <body>
     <main class="auth-screen" id="auth-screen">
@@ -60,6 +60,10 @@
         <div class="connection-status is-waiting" id="sensor-status" role="status">
             <span class="connection-dot" aria-hidden="true"></span>
             <span id="sensor-status-label">Belum ada data sensor</span>
+        </div>
+        <div class="connection-status board-status is-waiting" id="board-status" role="status">
+            <span class="connection-dot" aria-hidden="true"></span>
+            <span id="board-status-label">ESP32 belum terhubung</span>
         </div>
 
         <section class="summary-grid" aria-label="Ringkasan pemakaian">
@@ -187,6 +191,6 @@
     </div>
 
     <script src="/assets/config.js?v=10"></script>
-    <script src="/assets/script.js?v=11"></script>
+    <script src="/assets/script.js?v=12"></script>
 </body>
 </html>

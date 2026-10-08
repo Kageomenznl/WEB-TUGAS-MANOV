@@ -162,7 +162,8 @@ def init_db():
                         daya_watt DOUBLE PRECISION DEFAULT 0,
                         total_kwh DOUBLE PRECISION DEFAULT 0,
                         total_biaya DOUBLE PRECISION DEFAULT 0,
-                        last_reading_at DOUBLE PRECISION DEFAULT 0)''')
+                        last_reading_at DOUBLE PRECISION DEFAULT 0,
+                        last_seen_at DOUBLE PRECISION DEFAULT 0)''')
         existing_columns = {
             row['name'] for row in c.execute(
                 "SELECT column_name AS name FROM information_schema.columns WHERE table_name='kamar'"
@@ -179,7 +180,8 @@ def init_db():
                         daya_watt REAL DEFAULT 0,
                         total_kwh REAL DEFAULT 0,
                         total_biaya REAL DEFAULT 0,
-                        last_reading_at REAL DEFAULT 0)''')
+                        last_reading_at REAL DEFAULT 0,
+                        last_seen_at REAL DEFAULT 0)''')
         existing_columns = {row['name'] for row in c.execute("PRAGMA table_info(kamar)").fetchall()}
     measurement_type = 'DOUBLE PRECISION' if conn.postgres else 'REAL'
     new_columns = {
@@ -187,6 +189,7 @@ def init_db():
         'current_a': f'{measurement_type} DEFAULT 0',
         'power_factor': f'{measurement_type} DEFAULT 1',
         'last_reading_at': f'{measurement_type} DEFAULT 0',
+        'last_seen_at': f'{measurement_type} DEFAULT 0',
     }
     for column, definition in new_columns.items():
         if column not in existing_columns:
@@ -303,6 +306,7 @@ def require_site_login():
         '/api/login',
         '/api/logout',
         '/api/health',
+        '/api/sensor/heartbeat',
         '/api/sensor/reading',
     }
     if request.path.startswith('/api/') and request.path not in public_paths:
@@ -420,6 +424,7 @@ def get_data():
         total_semua_biaya = 0
         pembacaan_bulan_ini = False
         last_reading_at = 0
+        last_board_seen_at = 0
         waktu_sekarang = time.time()
         periode_tagihan = current_billing_period()
 
@@ -433,6 +438,10 @@ def get_data():
                 k['last_reading_at'] > 0
                 and waktu_sekarang - k['last_reading_at'] <= SENSOR_ONLINE_SECONDS
             )
+            k['board_online'] = (
+                k['last_seen_at'] > 0
+                and waktu_sekarang - k['last_seen_at'] <= SENSOR_ONLINE_SECONDS
+            )
             k['has_month_reading'] = (
                 k['last_reading_at'] > 0
                 and (
@@ -442,6 +451,7 @@ def get_data():
             )
             pembacaan_bulan_ini = pembacaan_bulan_ini or k['has_month_reading']
             last_reading_at = max(last_reading_at, k['last_reading_at'])
+            last_board_seen_at = max(last_board_seen_at, k['last_seen_at'])
             if k['sensor_online']:
                 total_semua_watt += k['daya_watt']
             total_semua_kwh += k['total_kwh']
@@ -458,10 +468,38 @@ def get_data():
             'total_kwh': round(total_semua_kwh, 4),
             'total_biaya': round(total_semua_biaya, 2),
             'has_month_reading': pembacaan_bulan_ini,
-            'last_reading_at': last_reading_at
+            'last_reading_at': last_reading_at,
+            'last_board_seen_at': last_board_seen_at
         },
         'billing_period': periode_tagihan
     })
+
+@app.route('/api/sensor/heartbeat', methods=['POST'])
+def receive_sensor_heartbeat():
+    auth_error = require_api_key('SENSOR_API_KEY', 'X-Sensor-Key')
+    if auth_error:
+        return auth_error
+
+    data = request.get_json(silent=True)
+    nomor = data.get('nomor') if isinstance(data, dict) else None
+    if not isinstance(nomor, str) or nomor not in {room[0] for room in ROOMS}:
+        return jsonify({'status': 'gagal', 'error': 'Nomor kamar harus 01 sampai 05.'}), 400
+
+    ensure_database_initialized()
+    waktu_terlihat = time.time()
+    conn = get_db_connection()
+    try:
+        result = conn.execute(
+            'UPDATE kamar SET last_seen_at=? WHERE nomor=?',
+            (waktu_terlihat, nomor)
+        )
+        if result.rowcount == 0:
+            return jsonify({'status': 'gagal', 'error': 'Kamar tidak ditemukan.'}), 404
+        conn.commit()
+    finally:
+        conn.close()
+
+    return jsonify({'status': 'sukses', 'nomor': nomor, 'last_seen_at': waktu_terlihat})
 
 @app.route('/api/sensor/reading', methods=['POST'])
 def receive_sensor_reading():
@@ -521,11 +559,11 @@ def receive_sensor_reading():
         conn.execute(
             """UPDATE kamar
                SET voltage_v=?, current_a=?, power_factor=?, daya_watt=?,
-                   total_kwh=?, last_reading_at=?
+                   total_kwh=?, last_reading_at=?, last_seen_at=?
                WHERE nomor=?""",
             (
                 readings['voltage_v'], readings['current_a'], readings['power_factor'],
-                daya_watt, total_kwh, waktu_baca, nomor
+                daya_watt, total_kwh, waktu_baca, waktu_baca, nomor
             )
         )
         conn.commit()

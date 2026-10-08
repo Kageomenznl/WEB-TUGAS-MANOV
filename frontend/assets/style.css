@@ -122,6 +122,35 @@ button {
     white-space: normal;
 }
 
+.board-status {
+    min-height: 38px;
+    margin-top: 8px;
+    color: #7d8da0;
+    background: rgba(255, 255, 255, 0.62);
+    border-color: #e8eef5;
+}
+
+.board-status.is-waiting {
+    color: #8c7550;
+    background: #fffaf0;
+    border-color: #f2e9d6;
+}
+
+.board-status.is-waiting .connection-dot {
+    background: #d7ad5c;
+}
+
+.board-status.is-online {
+    color: #397c69;
+    background: #f0f8f5;
+    border-color: #deeee7;
+}
+
+.board-status.is-online .connection-dot {
+    background: #5eaa8e;
+    box-shadow: 0 0 0 3px rgba(94, 170, 142, 0.12);
+}
+
 .connection-status.is-waiting {
     color: #8c7550;
     background: #fffaf0;
@@ -909,6 +938,10 @@ h1 {
 
     .connection-status {
         align-self: flex-start;
+    }
+
+    .board-status {
+        margin-top: 7px;
     }
 
     .brand {
