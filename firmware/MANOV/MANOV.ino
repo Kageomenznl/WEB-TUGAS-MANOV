@@ -7,12 +7,11 @@
 #include <LiquidCrystal_I2C.h>
 #include <math.h>
 #include <time.h>
-#include "MANOV_secrets.h"
-
 // ======================== PENGATURAN KONEKSI ========================
-// Isi kredensial Wi-Fi lokal. Jangan unggah nilai asli ke GitHub.
-// Gunakan SENSOR_API_KEY dari pengaturan Environment Variables Vercel.
-// Jangan bagikan atau unggah kunci ini ke GitHub.
+// Ganti nilai ini pada salinan lokal. Jangan unggah kredensial asli ke GitHub.
+const char WIFI_SSID[] = "GANTI_DENGAN_NAMA_WIFI";
+const char WIFI_PASSWORD[] = "GANTI_DENGAN_PASSWORD_WIFI";
+const char SENSOR_API_KEY[] = "GANTI_DENGAN_SENSOR_API_KEY";
 const char SERVER_URL[] =
     "https://web-tugas-manov.vercel.app/api/sensor/reading";
 const char HEARTBEAT_URL[] =

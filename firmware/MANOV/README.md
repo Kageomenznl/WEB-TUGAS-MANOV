@@ -1,9 +1,9 @@
 # Firmware ESP32 MANOV
 
-`MANOV.ino` adalah salinan sketch perangkat yang juga digunakan di folder
-Arduino OneDrive. Untuk mengompilasi salinan repo, buat `MANOV_secrets.h` dari
-`MANOV_secrets.example.h`, lalu isi SSID, password Wi-Fi, dan `SENSOR_API_KEY`
-yang sama dengan nilai deployment. Jangan commit file berisi kredensial.
+Untuk memakai sketch, buka `MANOV.ino` dan isi `WIFI_SSID`, `WIFI_PASSWORD`,
+serta `SENSOR_API_KEY` di bagian atas file dengan nilai milikmu. Atur
+`SENSOR_API_KEY` yang sama di environment Production Vercel. Jangan commit
+sketch yang berisi kredensial asli; gunakan placeholder pada salinan publik.
 
 Pasang library Arduino `MFRC522` dan `LiquidCrystal_I2C`, pilih board ESP32 yang
 sesuai, lalu sesuaikan pin, nomor kamar, UID kartu, serta sensitivitas ACS712.

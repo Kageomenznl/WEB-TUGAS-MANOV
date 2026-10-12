@@ -1,5 +1,0 @@
-#pragma once
-
-const char WIFI_SSID[] = "GANTI_DENGAN_NAMA_WIFI";
-const char WIFI_PASSWORD[] = "GANTI_DENGAN_PASSWORD_WIFI";
-const char SENSOR_API_KEY[] = "GANTI_DENGAN_SENSOR_API_KEY";
