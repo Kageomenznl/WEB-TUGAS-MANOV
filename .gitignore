@@ -9,3 +9,4 @@ node_modules/
 *.pt
 *.zip
 *.exe
+/firmware/MANOV/MANOV_secrets.h

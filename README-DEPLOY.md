@@ -100,6 +100,9 @@ Jika memilih hosting terpisah, siapkan database PostgreSQL terlebih dahulu.
 
 ## Sambungkan ESP32
 
+- Sketch firmware yang terhubung ke API ada di
+  [`firmware/MANOV/`](./firmware/MANOV/). Ikuti README di folder tersebut untuk
+  menyiapkan library dan kredensial lokal yang aman.
 - URL tujuan:
   - Vercel: `https://<domain-vercel>/api/sensor/reading`
   - Render: `https://<nama-service>.onrender.com/api/sensor/reading`
