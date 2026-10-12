@@ -63,6 +63,9 @@ bP6MvPJwNQzcmRk13NfIRmPVNnGuV/u3gm3c
 // Sesuaikan nomor pin jika rangkaian ESP32 berbeda.
 const int RFID_RST_PIN = 22;
 const int RFID_SS_PIN = 5;
+const int RFID_SCK_PIN = 18;
+const int RFID_MISO_PIN = 19;
+const int RFID_MOSI_PIN = 23;
 const int RELAY_MAIN_PIN = 25;
 const int RELAY_LIGHT_PIN = 26;
 const int PIR_PIN = 21;
@@ -146,7 +149,7 @@ void setup() {
   analogReadResolution(12);
   analogSetPinAttenuation(ACS_PIN, ADC_11db);
 
-  SPI.begin();
+  SPI.begin(RFID_SCK_PIN, RFID_MISO_PIN, RFID_MOSI_PIN, RFID_SS_PIN);
   initializeRfidReader();
 
   WiFi.mode(WIFI_STA);
@@ -178,6 +181,12 @@ void loop() {
 void initializeRfidReader() {
   mfrc522.PCD_Init();
   mfrc522.PCD_AntennaOn();
+  const byte version = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
+  Serial.printf("MFRC522 VersionReg: 0x%02X\n", version);
+  if (version == 0x00 || version == 0xFF) {
+    Serial.println(
+        "RFID reader tidak merespons: cek daya 3.3V, GND, dan kabel SPI.");
+  }
   lastRfidInitTime = millis();
   delay(4);
 }
